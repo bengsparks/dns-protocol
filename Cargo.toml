@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["dns_codec", "dns_resolver", "dns_server"]
+
+[workspace.dependencies]
+tokio = { version = "1.38.0", default-features = false }
+
+dns_codec = { path = "./dns_codec" }

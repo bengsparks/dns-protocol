@@ -1,0 +1,13 @@
+[package]
+name = "dns_codec"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+byteorder = "1.5.0"
+thiserror = "1"
+tokio-util = { version = "0.7.11", features = ["io", "io-util", "net", "codec"] }
+
+[dev-dependencies]
+futures = "0.3.30"
+tokio = { workspace = true, features = ["macros", "rt"] }
