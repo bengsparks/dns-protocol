@@ -1,22 +1,24 @@
+use num_enum::TryFromPrimitive;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Question {
     /// A domain name represented as a sequence of labels, where each label consists of a
     /// length octet followed by that number of octets.
     /// The domain name terminates with the zero length octet for the null label of the root. Note that this field may be an odd number of octets; no padding is used.
-    pub name: Vec<u8>,
+    pub name: crate::Name,
 
     /// Specifies the type of the query. The values for this field include all codes valid for a TYPE field,
     /// together with some more general codes which can match more than one type of RR.
-    pub kind: Type,
+    pub kind: crate::QType,
 
     /// Specifies the class of the query.
     /// For example, the QCLASS field is IN for the Internet.
-    pub class: Class,
+    pub class: crate::QClass,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u16)]
-pub enum Type {
+pub enum QType {
     /// A host address
     A = 1,
 
@@ -64,44 +66,105 @@ pub enum Type {
 
     /// Text strings
     TXT = 16,
+
+    /// Responsible Person
+    RP = 17,
+
+    /// Location of database servers of an AFS cell.
+    AFSDB = 18,
+
+    SIG = 24,
+
+    KEY = 25,
+
+    AAAA = 28,
+
+    LOC = 29,
+
+    SRV = 33,
+
+    NAPTR = 35,
+
+    KX = 36,
+
+    CERT = 37,
+
+    DNAME = 39,
+
+    APL = 42,
+
+    DS = 43,
+
+    SSHFP = 44,
+
+    IPSECKEY = 45,
+
+    RRSIG = 46,
+
+    NSEC = 47,
+
+    DNSKEY = 48,
+
+    DHCID = 49,
+
+    NSEC3 = 50,
+
+    NSEC3PARAM = 51,
+
+    TSLA = 52,
+
+    SMIMEA = 53,
+
+    HIP = 55,
+
+    CDS = 59,
+
+    CDNSKEY = 60,
+
+    OPENPGPKEY = 61,
+
+    CSYNC = 62,
+
+    ZONEMD = 63,
+
+    SVCB = 64,
+
+    HTTOS = 65,
+
+    EUI48 = 108,
+
+    EUI64 = 109,
+
+    TKEY = 249,
+
+    TSIG = 250,
+
+    URI = 256,
+
+    CAA = 257,
+
+    WALLET = 262,
+
+    TA = 32768,
+
+    DLV = 32769,
+
+    /// A request for a transfer of an entire zone
+    AXFR = 252,
+
+    /// A request for mailbox-related records (MB, MG or MR)
+    MAILB = 253,
+
+    /// A request for mail agent RRs (Obsolete - see MX)
+    MAILA = 254,
+
+    /// A request for all records
+    STAR = 255,
 }
 
-impl std::convert::TryFrom<u16> for Type {
-    type Error = std::io::Error;
-
-    fn try_from(value: u16) -> Result<Self, Self::Error> {
-        let variant = match value {
-            1 => Self::A,
-            2 => Self::NS,
-            3 => Self::MD,
-            4 => Self::MF,
-            5 => Self::CNAME,
-            6 => Self::SOA,
-            7 => Self::MB,
-            8 => Self::MG,
-            9 => Self::MR,
-            10 => Self::NULL,
-            11 => Self::WKS,
-            12 => Self::PTR,
-            13 => Self::HINFO,
-            14 => Self::MINFO,
-            15 => Self::MX,
-            16 => Self::TXT,
-            _ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Type is expected to be between 1 and 16",
-                ))
-            }
-        };
-
-        Ok(variant)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u16)]
-pub enum Class {
+pub enum QClass {
     /// The Internet
     IN = 1,
 
@@ -113,25 +176,7 @@ pub enum Class {
 
     /// Hesiod
     HS = 4,
-}
 
-impl std::convert::TryFrom<u16> for Class {
-    type Error = std::io::Error;
-
-    fn try_from(value: u16) -> Result<Self, Self::Error> {
-        let variant = match value {
-            1 => Self::IN,
-            2 => Self::CS,
-            3 => Self::CH,
-            4 => Self::HS,
-            _ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Class is expected to be between 1 and 16",
-                ))
-            }
-        };
-
-        Ok(variant)
-    }
+    /// Any class
+    STAR = 255,
 }

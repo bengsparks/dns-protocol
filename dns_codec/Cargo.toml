@@ -3,11 +3,20 @@ name = "dns_codec"
 version = "0.1.0"
 edition = "2021"
 
+[[example]]
+name = "udp"
+
 [dependencies]
 byteorder = "1.5.0"
 thiserror = "1"
 tokio-util = { version = "0.7.11", features = ["io", "io-util", "net", "codec"] }
 
+rand = { version = "0.8", optional = true } 
+num_enum = "0.7.2"
+
 [dev-dependencies]
 futures = "0.3.30"
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+
+[features]
+rand = ["dep:rand"]

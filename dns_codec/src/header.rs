@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub struct Header {
     /// Identifier assigned by the program that generates any kind of query.
@@ -22,11 +22,32 @@ pub struct Header {
     pub arcount: u16,
 }
 
+impl std::fmt::Debug for Header {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Header")
+            .field("id", &format_args!("0x{:x}", self.id))
+            .field("flags", &self.flags)
+            .field("qdcount", &self.qdcount)
+            .field("ancount", &self.ancount)
+            .field("ncount", &self.ncount)
+            .field("arcount", &self.arcount)
+            .finish()
+    }
+}
+
 ///  In basic DNS, query messages should have empty answer, authority and additional sections.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct Flags(pub(crate) u16);
+pub struct Flags(pub u16);
+
+impl std::fmt::Debug for Flags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Flags")
+            .field(&&format_args!("0x{:x}", self.0))
+            .finish()
+    }
+}
 
 /// A one bit field that specifies whether this message is a query (0), or a response (1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -26,9 +26,11 @@ impl tokio_util::codec::Encoder<crate::Question> for super::QuestionCodec {
     fn encode(&mut self, item: crate::Question, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let mut writer = dst.writer();
 
-        for segment in item.name.split(|c| *c == b'.') {
-            writer.write_u8(segment.len() as u8)?;
-            writer.write_all(segment)?;
+        let crate::Name(labels) = item.name;
+
+        for label in labels.split(|c| *c == b'.') {
+            writer.write_u8(label.len() as u8)?;
+            writer.write_all(label)?;
         }
         writer.write_u8(0)?;
 
@@ -39,10 +41,9 @@ impl tokio_util::codec::Encoder<crate::Question> for super::QuestionCodec {
     }
 }
 
-
 impl tokio_util::codec::Encoder<crate::Query> for super::QueryCodec {
     type Error = std::io::Error;
-    
+
     fn encode(&mut self, item: crate::Query, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let crate::Query { header, question } = item;
 
