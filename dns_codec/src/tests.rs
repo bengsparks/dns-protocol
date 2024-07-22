@@ -4,7 +4,7 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use crate::Flags;
 
 #[tokio::test]
-async fn query_codec() {
+async fn query() {
     let query = crate::Query {
         header: crate::Header {
             id: 0x8298,

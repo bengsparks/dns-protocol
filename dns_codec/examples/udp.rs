@@ -37,13 +37,18 @@ async fn main() {
 
     println!("{origin}: {response:#?}");
 
-    for record in response.answers {
-        println!("[ANSWER]: {}", record.pretty_data());
+    println!("[HEADER]: {:?}", response.header());
+
+    for question in response.questions() {
+        println!("[QUESTION]: {:?}", question);
     }
-    for record in response.authorities {
-        println!("[AUTHORITY]: {}", record.pretty_data());
+    for record in response.answers() {
+        println!("[ANSWER]: {:?}", record);
     }
-    for record in response.additionals {
-        println!("[ADDITIONAL]: {}", record.pretty_data());
+    for record in response.authorities() {
+        println!("[AUTHORITY]: {:?}", record);
+    }
+    for record in response.additionals() {
+        println!("[ADDITIONAL]: {:?}", record);
     }
 }

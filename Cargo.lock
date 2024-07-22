@@ -67,6 +67,7 @@ name = "dns_codec"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "bytes",
  "futures",
  "num_enum",
  "rand",

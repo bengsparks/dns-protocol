@@ -9,14 +9,13 @@ mod response;
 pub use codec::{QueryCodec, ResponseCodec};
 
 pub use query::Query;
-pub use response::Response;
+pub(crate) use response::Metadata;
+pub use response::{Response, ResponseBytes};
 
 pub use header::{Flags, Header};
 pub use name::Name;
 pub use question::{QClass, QType, Question};
-pub use record::{Class, Type, Record};
-
-pub(crate) use codec::decode::components::label;
+pub use record::{Class, Record, Type};
 
 #[cfg(test)]
 mod tests;
