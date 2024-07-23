@@ -19,7 +19,7 @@ impl tokio_util::codec::Decoder for super::ResponseCodec {
     type Error = io::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        let underlying: &[u8] = &src;
+        let underlying: &[u8] = src;
         let mut cursor = io::Cursor::new(underlying);
 
         // Headers have a fixed length of 96 bits; only decode counts
@@ -144,8 +144,10 @@ pub mod thin {
 
 /// Actually parse the bytestream
 pub mod deep {
-    use core::net;
-    use std::io::{self, Read, Seek};
+    use std::{
+        io::{self, Read, Seek},
+        net::{Ipv4Addr, Ipv6Addr},
+    };
 
     use byteorder::{NetworkEndian, ReadBytesExt};
     use bytes::Buf as _;
@@ -205,11 +207,9 @@ pub mod deep {
                     return Ok(None);
                 }
                 break;
-            } else {
-                if decode_uncompressed(&mut name, cursor, length)?.is_none() {
-                    return Ok(None);
-                }
-            };
+            } else if decode_uncompressed(&mut name, cursor, length)?.is_none() {
+                return Ok(None);
+            }
 
             length = cursor.read_u8()?;
             if length != 0 {
@@ -231,6 +231,8 @@ pub mod deep {
         let rdlength = cursor.read_u16::<NetworkEndian>()?;
 
         let mut rdata = Vec::with_capacity(rdlength.into());
+        // Cloning here means the original cursor still points at the RDATA portion for further parsing
+        let mut fulldata_cursor = cursor.clone();
         Read::take(cursor, rdlength.into()).read_to_end(&mut rdata)?;
 
         if rdata.len() != rdlength.into() {
@@ -253,6 +255,25 @@ pub mod deep {
             )
         })?;
 
+        let full_data = match kind {
+            crate::Type::A => {
+                let mut reader = rdata.reader();
+                let bits = reader.read_u32::<NetworkEndian>()?;
+                Some(Ipv4Addr::from_bits(bits).to_string())
+            }
+            crate::Type::AAAA => {
+                let mut reader = rdata.reader();
+                let bits = reader.read_u128::<NetworkEndian>()?;
+                Some(Ipv6Addr::from(bits).to_string())
+            }
+            crate::Type::NS => {
+                // cursor.seek_relative(-Into::<i64>::into(rdlength))?;
+                let crate::Name(name) = super::deep::label(&mut fulldata_cursor)?.unwrap();
+                Some(String::from_utf8(name).unwrap())
+            }
+            _ => None,
+        };
+
         Ok(Some(crate::Record {
             name: label,
             kind,
@@ -260,6 +281,7 @@ pub mod deep {
             ttl,
             length: rdlength,
             data: rdata,
+            full_data,
         }))
     }
 

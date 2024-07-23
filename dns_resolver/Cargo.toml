@@ -1,0 +1,13 @@
+[package]
+name = "dns_resolver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dns_codec = { workspace = true }
+dns_sans_io = { workspace = true }
+env_logger = "0.11.4"
+futures = { workspace = true }
+
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net"] }
+tokio-util = { version = "0.7.11", features = ["codec", "io", "io-util", "net"] }

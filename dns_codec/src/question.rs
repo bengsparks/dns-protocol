@@ -16,6 +16,8 @@ pub struct Question {
     pub class: crate::QClass,
 }
 
+/// QTYPE fields appear in the question part of a query.  
+/// QTYPES are a superset of TYPEs, hence all TYPEs are valid QTYPEs. 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u16)]
 pub enum QType {
@@ -179,4 +181,11 @@ pub enum QClass {
 
     /// Any class
     STAR = 255,
+}
+
+
+impl std::convert::From<crate::Type> for crate::QType {
+    fn from(value: crate::Type) -> Self {
+        (value as u16).try_into().unwrap()
+    }
 }

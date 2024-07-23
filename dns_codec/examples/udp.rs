@@ -28,7 +28,7 @@ async fn main() {
     };
 
     let _ = sink
-        .send((query, "198.41.0.4:53".parse().unwrap()))
+        .send((query, "8.8.8.8:53".parse().unwrap()))
         .await
         .unwrap();
 

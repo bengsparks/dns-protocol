@@ -1,3 +1,5 @@
+#![feature(ip_bits)]
+
 mod codec;
 mod header;
 mod name;

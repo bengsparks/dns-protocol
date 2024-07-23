@@ -1,8 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["dns_codec", "dns_resolver", "dns_server"]
+members = ["dns_codec", "dns_resolver", "dns_server", "dns_sans_io"]
 
 [workspace.dependencies]
-tokio = { version = "1.38.0", default-features = false }
-
 dns_codec = { path = "./dns_codec" }
+dns_sans_io = { path = "./dns_sans_io" }
+
+futures = { version = "0.3" }
+tokio = { version = "1.38.0", default-features = false }
+log = { version = "0.4" }
