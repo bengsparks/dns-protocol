@@ -1,23 +1,15 @@
-#![feature(ip_bits)]
-
+mod atom;
 mod codec;
-mod header;
-mod name;
+mod molecule;
 mod query;
-mod question;
-mod record;
 mod response;
 
+/// Decoding / Encoding
 pub use codec::{QueryCodec, ResponseCodec};
 
+pub use atom::{Class, Header, Name, QClass, QType, RData, Ttl, Type};
+pub use molecule::{Question, Record};
+
+/// Values
 pub use query::Query;
-pub(crate) use response::Metadata;
-pub use response::{Response, ResponseBytes};
-
-pub use header::{Flags, Header};
-pub use name::Name;
-pub use question::{QClass, QType, Question};
-pub use record::{Class, Record, Type};
-
-#[cfg(test)]
-mod tests;
+pub use response::Response;

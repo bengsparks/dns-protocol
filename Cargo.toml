@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["dns_codec", "dns_resolver", "dns_server", "dns_sans_io"]
+members = ["dns_codec", "dns_sans_io", "dns_resolver"]
 
 [workspace.dependencies]
 dns_codec = { path = "./dns_codec" }

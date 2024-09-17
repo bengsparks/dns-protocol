@@ -1,158 +1,62 @@
 use std::io;
 
-use crate::codec::decode;
+use bytes::Buf as _;
+use tokio_util::bytes::BytesMut;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use crate::{atom::rotri, Header, Question, Record, ResponseCodec};
+
+#[derive(Debug)]
 pub struct Response {
-    pub header: crate::Header,
-    pub questions: Vec<crate::Question>,
-    pub answers: Vec<crate::Record>,
-    pub authorities: Vec<crate::Record>,
-    pub additionals: Vec<crate::Record>,
+    pub header: Header,
+    pub questions: Vec<Question>,
+    pub answers: Vec<Record>,
+    pub authorities: Vec<Record>,
+    pub additionals: Vec<Record>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Tuples of (offset, count)
-pub(crate) struct Metadata {
-    pub(crate) questions: (u16, u64),
-    pub(crate) answers: (u16, u64),
-    pub(crate) authorities: (u16, u64),
-    pub(crate) additionals: (u16, u64),
-}
+impl tokio_util::codec::Decoder for ResponseCodec {
+    type Item = crate::Response;
+    type Error = io::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ResponseBytes {
-    pub(crate) underlying: bytes::Bytes,
-    pub(crate) offsets: Metadata,
-}
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        let underlying: &[u8] = src;
+        let mut cursor = io::Cursor::new(underlying);
 
-impl ResponseBytes {
-    pub fn header(&self) -> crate::Header {
-        let mut cursor = io::Cursor::new(&*self.underlying);
+        let header = rotri!(Header::decode(&mut cursor));
 
-        let header = decode::deep::header(&mut cursor).unwrap().unwrap();
-        header
-    }
-
-    pub fn questions(&self) -> QuestionDecoder<'_> {
-        let mut cursor = io::Cursor::new(&*self.underlying);
-
-        let (count, begin) = self.offsets.questions;
-        let (_, end) = self.offsets.answers;
-
-        cursor.set_position(begin);
-        QuestionDecoder {
-            cursor,
-            end,
-            hint: count,
+        let mut questions = Vec::with_capacity(header.qdcount.into());
+        for _ in 0..header.qdcount {
+            let question = rotri!(Question::decode(&mut cursor)); 
+            questions.push(question);
         }
-    }
 
-    pub fn answers(&self) -> RecordDecoder<'_> {
-        let mut cursor = io::Cursor::new(&*self.underlying);
-
-        let (count, begin) =  self.offsets.answers;
-        let (_, end) =  self.offsets.authorities;
-
-        cursor.set_position(begin);
-        RecordDecoder {
-            cursor,
-            end,
-            hint: count,
+        let mut answers = Vec::with_capacity(header.ancount.into());
+        for _ in 0..header.ancount {
+            let answer = rotri!(Record::decode(&mut cursor));
+            answers.push(answer);
         }
-    }
 
-    pub fn authorities(&self) -> RecordDecoder<'_> {
-        let mut cursor = io::Cursor::new(&*self.underlying);
-
-        let (count, begin) =  self.offsets.authorities;
-        let (_, end) =  self.offsets.additionals;
-
-        cursor.set_position(begin);
-        RecordDecoder {
-            cursor,
-            end,
-            hint: count,
+        let mut authorities = Vec::with_capacity(header.ncount.into());
+        for _ in 0..header.ncount {
+            let authority = rotri!(Record::decode(&mut cursor));
+            authorities.push(authority);
         }
-    }
 
-    pub fn additionals(&self) -> RecordDecoder<'_> {
-        let mut cursor = io::Cursor::new(&*self.underlying);
-
-        let (count, begin) = self.offsets.additionals;
-        let end = self.underlying.len() as u64;
-
-        cursor.set_position(begin);
-        RecordDecoder {
-            cursor,
-            end,
-            hint: count,
+        let mut additionals = Vec::with_capacity(header.ncount.into());
+        for _ in 0..header.ncount {
+            let additional = rotri!(Record::decode(&mut cursor));
+            additionals.push(additional);
         }
-    }
-}
+        src.advance(cursor.position().try_into().unwrap());
 
-pub struct QuestionDecoder<'a> {
-    cursor: std::io::Cursor<&'a [u8]>,
-    end: u64,
-    hint: u16,
-}
-
-impl<'a> std::iter::Iterator for QuestionDecoder<'a> {
-    type Item = crate::Question;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor.position() >= self.end {
-            return None;
-        };
-
-        let question = decode::deep::question(&mut self.cursor).unwrap().unwrap();
-        Some(question)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.hint.into(), Some(self.hint.into()))
-    }
-}
-
-pub struct RecordDecoder<'a> {
-    cursor: std::io::Cursor<&'a [u8]>,
-    end: u64,
-    hint: u16,
-}
-
-impl<'a> std::iter::Iterator for RecordDecoder<'a> {
-    type Item = crate::Record;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor.position() >= self.end {
-            return None;
-        };
-
-        let record = decode::deep::record(&mut self.cursor).unwrap().unwrap();
-        Some(record)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.hint.into(), Some(self.hint.into()))
-    }
-}
-
-impl std::convert::From<ResponseBytes> for Response {
-    fn from(value: ResponseBytes) -> Self {
-        // Invariant: the `underlying` field always contains the bytes required for this conversion
-        let header = value.header();
-
-        let questions = Vec::from_iter(value.questions());
-        let answers = Vec::from_iter(value.answers());
-        let authorities = Vec::from_iter(value.authorities());
-        let additionals = Vec::from_iter(value.additionals());
-
-        Self {
+        let response = crate::Response {
             header,
             questions,
             answers,
             authorities,
             additionals,
-        }
+        };
+        
+        Ok(Some(response))
     }
 }

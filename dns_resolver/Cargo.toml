@@ -8,6 +8,7 @@ dns_codec = { workspace = true }
 dns_sans_io = { workspace = true }
 env_logger = "0.11.4"
 futures = { workspace = true }
+log = { workspace = true }
 
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net"] }
 tokio-util = { version = "0.7.11", features = ["codec", "io", "io-util", "net"] }

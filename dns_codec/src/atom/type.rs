@@ -1,26 +1,11 @@
+use std::io;
+
+use byteorder::{NetworkEndian, ReadBytesExt as _};
 use num_enum::TryFromPrimitive;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Question {
-    /// A domain name represented as a sequence of labels, where each label consists of a
-    /// length octet followed by that number of octets.
-    /// The domain name terminates with the zero length octet for the null label of the root. Note that this field may be an odd number of octets; no padding is used.
-    pub name: crate::Name,
-
-    /// Specifies the type of the query. The values for this field include all codes valid for a TYPE field,
-    /// together with some more general codes which can match more than one type of RR.
-    pub kind: crate::QType,
-
-    /// Specifies the class of the query.
-    /// For example, the QCLASS field is IN for the Internet.
-    pub class: crate::QClass,
-}
-
-/// QTYPE fields appear in the question part of a query.  
-/// QTYPES are a superset of TYPEs, hence all TYPEs are valid QTYPEs. 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u16)]
-pub enum QType {
+pub enum Type {
     /// A host address
     A = 1,
 
@@ -150,42 +135,15 @@ pub enum QType {
     TA = 32768,
 
     DLV = 32769,
-
-    /// A request for a transfer of an entire zone
-    AXFR = 252,
-
-    /// A request for mailbox-related records (MB, MG or MR)
-    MAILB = 253,
-
-    /// A request for mail agent RRs (Obsolete - see MX)
-    MAILA = 254,
-
-    /// A request for all records
-    STAR = 255,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
-#[repr(u16)]
-pub enum QClass {
-    /// The Internet
-    IN = 1,
+impl Type {
+    pub(crate) fn decode<'a>(src: &mut io::Cursor<&'a [u8]>) -> Result<Option<Self>, io::Error> {
+        let decoded = src.read_u16::<NetworkEndian>()?;
+        let type_ = decoded
+            .try_into()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-    /// The CSNET class
-    CS = 2,
-
-    /// The CHAOS class
-    CH = 3,
-
-    /// Hesiod
-    HS = 4,
-
-    /// Any class
-    STAR = 255,
-}
-
-
-impl std::convert::From<crate::Type> for crate::QType {
-    fn from(value: crate::Type) -> Self {
-        (value as u16).try_into().unwrap()
+        Ok(Some(type_))
     }
 }

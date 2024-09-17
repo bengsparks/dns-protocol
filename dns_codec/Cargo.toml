@@ -11,6 +11,8 @@ byteorder = "1.5.0"
 thiserror = "1"
 tokio-util = { version = "0.7.11", features = ["io", "io-util", "net", "codec"] }
 
+log = { workspace = true }
+
 rand = { version = "0.8", optional = true } 
 num_enum = "0.7.2"
 bytes = "1.6.1"

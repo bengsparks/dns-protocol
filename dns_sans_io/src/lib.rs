@@ -1,5 +1,8 @@
 use core::net;
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    io,
+};
 
 use log;
 
@@ -7,14 +10,6 @@ use log;
 struct Enqueued {
     target: net::SocketAddr,
     query: dns_codec::Query,
-}
-
-#[derive(Debug)]
-struct Received {
-    source: net::SocketAddr,
-    target: net::SocketAddr,
-    interest: dns_codec::QType,
-    response: dns_codec::ResponseBytes,
 }
 
 #[derive(Debug)]
@@ -35,7 +30,7 @@ pub struct Transmit {
 pub struct Response {
     pub source: net::SocketAddr,
     pub target: net::SocketAddr,
-    pub action: Outcome,
+    pub outcome: Outcome,
 }
 
 #[derive(Debug, Default)]
@@ -63,24 +58,24 @@ impl DnsSansIo {
         resource: Vec<u8>,
     ) {
         let event = format!("0x{:04x}", id);
+        log::info!(target: &event, "enqueue: outgoing query for {} to {}", std::str::from_utf8(&resource).unwrap(), nameserver);
 
         let query = dns_codec::Query {
             header: dns_codec::Header {
                 id,
-                flags: dns_codec::Flags(0),
+                flags: 0,
                 qdcount: 1,
                 ancount: 0,
                 ncount: 0,
                 arcount: 0,
             },
             question: dns_codec::Question {
-                name: dns_codec::Name(resource),
+                name: resource.try_into().unwrap(),
                 kind: type_,
                 class: dns_codec::QClass::IN,
             },
         };
 
-        log::info!(target: &event, "enqueue: received outgoing query for {}", nameserver);
         self.enqueued.push_back(Enqueued {
             target: nameserver,
             query,
@@ -117,7 +112,7 @@ impl DnsSansIo {
 
         self.transmitted
             .insert(query.header.id, (target, query.question.kind));
-        log::debug!(target: &event, "poll: query for {target}");
+        log::debug!(target: &event, "poll: query {target} for {:?}", query.question.name);
 
         Some(Transmit { target, query })
     }
@@ -125,59 +120,62 @@ impl DnsSansIo {
     pub fn handle_response(
         &mut self,
         nameserver: net::SocketAddr,
-        response: dns_codec::ResponseBytes,
-    ) -> Option<Response> {
-        let header = response.header();
+        response: dns_codec::Response,
+    ) -> io::Result<Response> {
+        // We must decode the header
+        let header = response.header;
         let event = format!("0x{:04x}", header.id);
 
         let Some((target, interest)) = self.transmitted.remove(&header.id) else {
-            log::warn!(target: &event, "response: unknown id");
-            return None;
+            log::warn!(target: &event, "response: unknown id {}", header.id);
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("Unknown id {} was received", header.id),
+            ));
         };
 
-        let mut action = Outcome::Unresolved;
+        let mut outcome = Outcome::Unresolved;
 
-        if matches!(action, Outcome::Unresolved) {
-            let records =
-                Vec::from_iter(response.answers().filter(|answer| answer.kind == interest));
+        if matches!(outcome, Outcome::Unresolved) {
+            let records: Vec<_> = response
+                .answers
+                .into_iter()
+                .filter(|r| r.kind == interest)
+                .collect();
             if !records.is_empty() {
                 log::info!(target: &event, "response: resolved!");
-                action = Outcome::Resolved(records)
+                outcome = Outcome::Resolved(records);
             }
         }
 
-        if matches!(action, Outcome::Unresolved) {
-            let additionals = Vec::from_iter(
-                response
-                    .additionals()
-                    .filter(|answer| matches!(answer.kind, dns_codec::Type::NS)),
-            );
-            if !additionals.is_empty() {
-                log::info!(target: &event, "response: received namespace IPs!");
-                action = Outcome::NamespaceIp(additionals)
+        if matches!(outcome, Outcome::Unresolved) {
+            let records: Vec<_> = response
+                .additionals
+                .into_iter()
+                .filter(|r| r.kind == interest)
+                .collect();
+            if !records.is_empty() {
+                log::info!(target: &event, "response: received namespace ips!");
+                outcome = Outcome::NamespaceIp(records);
             }
         }
 
-        if matches!(action, Outcome::Unresolved) {
-            let authorities = Vec::from_iter(
-                response
-                    .authorities()
-                    .filter(|answer| matches!(answer.kind, dns_codec::Type::NS)),
-            );
-            if !authorities.is_empty() {
+        if matches!(outcome, Outcome::Unresolved) {
+            let records: Vec<_> = response
+                .authorities
+                .into_iter()
+                .filter(|r| r.kind == dns_codec::Type::NS)
+                .collect();
+            if !records.is_empty() {
                 log::info!(target: &event, "response: received namespace names!");
-                action = Outcome::NamespaceNames(authorities)
+                outcome = Outcome::NamespaceNames(records);
             }
         }
 
-        if matches!(action, Outcome::Unresolved) {
-            log::warn!(target: &event, "response: failed to resolve");
-        }
-
-        Some(Response {
+        Ok(Response {
             source: nameserver,
             target,
-            action,
+            outcome,
         })
     }
 
@@ -236,7 +234,7 @@ mod test {
         // I want to know about google.com
         resolver.enqueue_query(
             nameserver,
-            0x01,
+            0x8298,
             dns_codec::QType::A,
             b"google.com".to_vec(),
         );
@@ -248,9 +246,8 @@ mod test {
         // UDP receive...
         let origin = target;
 
-        let raw_bytes = b"\x00\x01\x80\x80\0\x01\0\x01\0\0\0\0\x06google\x03com\0\0\x01\0\x01\xc0\x0c\0\x01\0\x01\0\0\0\xc2\0\x04\xac\xd9\x10\xae";
         let mut bytes = BytesMut::new();
-        bytes.extend_from_slice(&raw_bytes[..]);
+        bytes.extend_from_slice(b"\x82\x98\x80\x80\0\x01\0\x01\0\0\0\0\x06google\x03com\0\0\x01\0\x01\xc0\x0c\0\x01\0\x01\0\0\0\xc2\0\x04\xac\xd9\x10\xae");
 
         let mut codec = dns_codec::ResponseCodec;
         let response = codec.decode(&mut bytes).unwrap().unwrap();
@@ -258,8 +255,8 @@ mod test {
         let super::Response {
             source,
             target,
-            action,
+            outcome,
         } = resolver.handle_response(origin, response).unwrap();
-        dbg!(action);
+        dbg!(outcome);
     }
 }

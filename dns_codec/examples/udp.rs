@@ -14,14 +14,14 @@ async fn main() {
     let query = dns_codec::Query {
         header: dns_codec::Header {
             id: 0x8298,
-            flags: dns_codec::Flags(0),
+            flags: 0,
             qdcount: 1,
             ancount: 0,
             ncount: 0,
             arcount: 0,
         },
         question: dns_codec::Question {
-            name: dns_codec::Name(b"google.com".into()),
+            name: b"google.com".to_vec().try_into().unwrap(),
             kind: dns_codec::QType::A,
             class: dns_codec::QClass::IN,
         },
@@ -37,18 +37,18 @@ async fn main() {
 
     println!("{origin}: {response:#?}");
 
-    println!("[HEADER]: {:?}", response.header());
+    println!("[HEADER]: {:?}", response.header);
 
-    for question in response.questions() {
+    for question in response.questions {
         println!("[QUESTION]: {:?}", question);
     }
-    for record in response.answers() {
+    for record in response.answers {
         println!("[ANSWER]: {:?}", record);
     }
-    for record in response.authorities() {
+    for record in response.authorities {
         println!("[AUTHORITY]: {:?}", record);
     }
-    for record in response.additionals() {
+    for record in response.additionals {
         println!("[ADDITIONAL]: {:?}", record);
     }
 }
