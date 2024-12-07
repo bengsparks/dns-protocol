@@ -1,6 +1,6 @@
 use core::net;
 use std::{
-    io::{self, Read},
+    io::{self, Seek},
     net::{Ipv4Addr, Ipv6Addr},
 };
 
@@ -9,7 +9,7 @@ use byteorder::{NetworkEndian, ReadBytesExt};
 
 use crate::atom;
 
-use super::rtri;
+use super::{rotri, rtri};
 
 impl RData {
     pub(crate) fn decode<'a>(
@@ -18,7 +18,7 @@ impl RData {
         kind: Type,
         class: Class,
     ) -> Result<Option<Self>, io::Error> {
-        let mut available = src.take(length.into());
+        let mut available = src.clone();
 
         let rdata = match (kind, class) {
             (Type::A, Class::IN) => {
@@ -31,6 +31,10 @@ impl RData {
                 let address = Ipv6Addr::from_bits(bits);
                 RData::Ipv6(address)
             }
+            (Type::NS, Class::IN) => {
+                let name = rotri!(atom::Name::decode(&mut available));
+                RData::Name(name)
+            }
             _ => {
                 unimplemented!("Unsupported kind, class pair: {kind:?}, {class:?})")
             } /*
@@ -42,6 +46,13 @@ impl RData {
               */
         };
 
+        // `length` does not have to match the amount of data consumed by the individual reads
+        let Ok(()) = src.seek_relative(length.into()) else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "RDATA is shorter than RLENGTH",
+            ));
+        };
         Ok(Some(rdata))
     }
 }
@@ -52,4 +63,16 @@ pub enum RData {
     Ipv4(net::Ipv4Addr) = 1,
     Ipv6(net::Ipv6Addr) = 26,
     Name(atom::Name),
+}
+
+impl std::convert::TryInto<net::IpAddr> for RData {
+    type Error = atom::Name;
+
+    fn try_into(self) -> Result<net::IpAddr, Self::Error> {
+        match self {
+            RData::Ipv4(ipv4_addr) => Ok(ipv4_addr.into()),
+            RData::Ipv6(ipv6_addr) => Ok(ipv6_addr.into()),
+            RData::Name(name) => Err(name),
+        }
+    }
 }
