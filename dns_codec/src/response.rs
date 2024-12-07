@@ -42,8 +42,9 @@ impl tokio_util::codec::Decoder for ResponseCodec {
             authorities.push(authority);
         }
 
-        let mut additionals = Vec::with_capacity(header.ncount.into());
-        for _ in 0..header.ncount {
+        log::trace!("Decoding {} Additional(s)", header.arcount);
+        let mut additionals = Vec::with_capacity(header.arcount.into());
+        for _ in 0..header.arcount {
             let additional = rotri!(Record::decode(&mut cursor));
             additionals.push(additional);
         }
