@@ -1,5 +1,5 @@
-mod record;
 mod question;
+mod record;
 
-pub use record::Record;
 pub use question::Question;
+pub use record::Record;

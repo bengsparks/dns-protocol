@@ -35,18 +35,20 @@ impl Record {
     pub(crate) fn decode<'a>(src: &mut io::Cursor<&'a [u8]>) -> Result<Option<Self>, io::Error> {
         let name = rotri!(Name::decode(src));
         log::trace!("{name:?}");
-        
+
         let kind = rotri!(Type::decode(src));
         log::trace!("{kind:?}");
-        
+
         let class = rotri!(Class::decode(src));
         log::trace!("{class:?}");
-        
+
         let ttl = rotri!(Ttl::decode(src));
         log::trace!("{ttl:?}");
 
         let length = rtri!(src.read_u16::<NetworkEndian>());
         let rdata = rotri!(RData::decode(src, length, kind, class));
+        log::trace!("{rdata:?}");
+
 
         let record = Record {
             name,

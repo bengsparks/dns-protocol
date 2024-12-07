@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, io::{self, Read}};
+use std::{cmp::Ordering, io};
 
 use byteorder::{NetworkEndian, ReadBytesExt};
 

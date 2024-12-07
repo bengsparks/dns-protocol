@@ -5,7 +5,6 @@ use num_enum::TryFromPrimitive;
 
 use super::rtri;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u16)]
 pub enum Class {

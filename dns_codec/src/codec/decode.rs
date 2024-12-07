@@ -33,7 +33,6 @@ impl tokio_util::codec::Decoder for super::QueryCodec {
     }
 }
 
-
 impl tokio_util::codec::Encoder<crate::Query> for super::QueryCodec {
     type Error = io::Error;
 

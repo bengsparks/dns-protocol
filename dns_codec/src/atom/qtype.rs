@@ -164,7 +164,7 @@ impl QType {
         Ok(Some(class))
     }
 
-    pub(crate) fn encode(self, dst: &mut tokio_util::bytes::BytesMut) -> Result<(), io::Error> { 
+    pub(crate) fn encode(self, dst: &mut tokio_util::bytes::BytesMut) -> Result<(), io::Error> {
         let mut writer = dst.writer();
         writer.write_u16::<NetworkEndian>(self as u16)?;
         Ok(())

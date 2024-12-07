@@ -1,4 +1,4 @@
-use std::io;
+use std::{fs::File, io::{self, Write}};
 
 use bytes::Buf as _;
 use tokio_util::bytes::BytesMut;
@@ -22,20 +22,24 @@ impl tokio_util::codec::Decoder for ResponseCodec {
         let underlying: &[u8] = src;
         let mut cursor = io::Cursor::new(underlying);
 
+        log::trace!("Decoding Header");
         let header = rotri!(Header::decode(&mut cursor));
 
+        log::trace!("Decoding {} Question(s)", header.qdcount);
         let mut questions = Vec::with_capacity(header.qdcount.into());
         for _ in 0..header.qdcount {
-            let question = rotri!(Question::decode(&mut cursor)); 
+            let question = rotri!(Question::decode(&mut cursor));
             questions.push(question);
         }
 
+        log::trace!("Decoding {} Answer(s)", header.ancount);
         let mut answers = Vec::with_capacity(header.ancount.into());
         for _ in 0..header.ancount {
             let answer = rotri!(Record::decode(&mut cursor));
             answers.push(answer);
         }
 
+        log::trace!("Decoding {} Authority(s)", header.ncount);
         let mut authorities = Vec::with_capacity(header.ncount.into());
         for _ in 0..header.ncount {
             let authority = rotri!(Record::decode(&mut cursor));
@@ -57,7 +61,24 @@ impl tokio_util::codec::Decoder for ResponseCodec {
             authorities,
             additionals,
         };
-        
+
         Ok(Some(response))
     }
+
+    /*
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        match self.decode(buf)? {
+            Some(frame) => Ok(Some(frame)),
+            None => {
+                if buf.is_empty() {
+                    Ok(None)
+                } else {
+                    let mut f = File::create("bytes.dump").unwrap();
+                    f.write_all(&*buf).unwrap();
+                    Err(io::Error::new(io::ErrorKind::Other, "bytes remaining on stream").into())
+                }
+            }
+        }
+    }
+    */
 }

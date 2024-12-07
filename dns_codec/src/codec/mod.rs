@@ -9,4 +9,3 @@ mod decode;
 pub struct QueryCodec;
 
 pub struct ResponseCodec;
-

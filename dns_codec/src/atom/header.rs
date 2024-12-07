@@ -13,7 +13,6 @@ pub struct Header {
     /// to match up replies to outstanding queries.
     pub id: u16,
 
-    ///
     pub flags: u16,
 
     /// Number of entries in the question section.
