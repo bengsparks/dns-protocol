@@ -14,12 +14,10 @@ use tokio_util::bytes::BytesMut;
 ///
 /// Domain names are subsets of ASCII, consisting of characters between a-z, A-Z, 0-9 and hypens.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Name(pub(crate) Vec<u8>);
+pub struct Name(pub Vec<u8>);
 
 impl Name {
-    pub(crate) fn decode<'a>(
-        src: &mut io::Cursor<&'a [u8]>,
-    ) -> Result<Option<Self>, io::Error> {
+    pub(crate) fn decode<'a>(src: &mut io::Cursor<&'a [u8]>) -> Result<Option<Self>, io::Error> {
         let mut label_length = rtri!(src.read_u8());
         let mut expanded = Vec::with_capacity(label_length.into());
         loop {
@@ -35,7 +33,7 @@ impl Name {
                     .read_to_end(&mut expanded));
                 if consumed != label_length.into() {
                     return Err(io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
+                        io::ErrorKind::InvalidData,
                         "Unexpectedly encountered end of stream while parsing name",
                     ));
                 }
@@ -74,14 +72,15 @@ impl Name {
         }
         writer.write_u8(0)?;
 
-
         Ok(())
     }
 }
 
 impl std::fmt::Debug for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Name").field(&std::str::from_utf8(&self.0).unwrap()).finish()
+        f.debug_tuple("Name")
+            .field(&std::str::from_utf8(&self.0).unwrap())
+            .finish()
     }
 }
 
