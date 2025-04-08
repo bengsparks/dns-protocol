@@ -7,5 +7,5 @@ dns_codec = { path = "./dns_codec" }
 dns_sans_io = { path = "./dns_sans_io" }
 
 futures = { version = "0.3" }
-tokio = { version = "1.38.0", default-features = false }
+tokio = { version = "1.44.2", default-features = false }
 log = { version = "0.4" }
