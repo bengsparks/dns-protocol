@@ -13,7 +13,7 @@ tokio-util = { version = "0.7.11", features = ["io", "io-util", "net", "codec"] 
 
 log = { workspace = true }
 
-rand = { version = "0.8", optional = true } 
+rand = { version = "0.9", optional = true } 
 num_enum = "0.7.2"
 bytes = "1.11.1"
 
